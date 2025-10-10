@@ -49,7 +49,6 @@ bool DatabaseManager::OpenDatabase() {
     return true;
 }
 
-
 bool DatabaseManager::CreateTables() {
     // إنشاء جدول التنزيلات
     const char* sql = "CREATE TABLE IF NOT EXISTS downloads ("
@@ -75,7 +74,6 @@ bool DatabaseManager::CreateTables() {
     
     return true;
 }
-
 
 bool DatabaseManager::AddDownload(const DownloadItem& item) {
     // إعداد الاستعلام
@@ -113,8 +111,6 @@ bool DatabaseManager::AddDownload(const DownloadItem& item) {
     return true;
 }
 
-
-
 bool DatabaseManager::UpdateDownload(const DownloadItem& item) {
     // إعداد الاستعلام
     const char* sql = "UPDATE downloads SET name = ?, url = ?, save_path = ?, status = ?, size = ?, downloaded = ?, is_youtube = ?, youtube_format = ? "
@@ -151,3 +147,146 @@ bool DatabaseManager::UpdateDownload(const DownloadItem& item) {
     return true;
 }
 
+bool DatabaseManager::DeleteDownload(int id) {
+    // إعداد الاستعلام
+    const char* sql = "DELETE FROM downloads WHERE id = ?;";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        wxLogError("Failed to prepare statement: %s", sqlite3_errmsg(m_db));
+        return false;
+    }
+    
+    // ربط القيم
+    sqlite3_bind_int(stmt, 1, id);
+    
+    // تنفيذ الاستعلام
+    result = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    if (result != SQLITE_DONE) {
+        wxLogError("Failed to delete download: %s", sqlite3_errmsg(m_db));
+        return false;
+    }
+    
+    wxLogMessage("Download deleted from database, id: %d", id);
+    return true;
+}
+
+std::vector<DownloadItem> DatabaseManager::GetAllDownloads() {
+    std::vector<DownloadItem> downloads;
+    
+    // إعداد الاستعلام
+    const char* sql = "SELECT id, name, url, save_path, status, size, downloaded, date_added, is_youtube, youtube_format FROM downloads;";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        wxLogError("Failed to prepare statement: %s", sqlite3_errmsg(m_db));
+        return downloads;
+    }
+    
+    // تنفيذ الاستعلام وقراءة النتائج
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        DownloadItem item;
+        
+        item.id = sqlite3_column_int(stmt, 0);
+        
+        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        if (name) {
+            item.name = wxString::FromUTF8(name);
+        }
+        
+        const char* url = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        if (url) {
+            item.url = wxString::FromUTF8(url);
+        }
+        
+        const char* savePath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+        if (savePath) {
+            item.savePath = wxString::FromUTF8(savePath);
+        }
+        
+        item.status = static_cast<DownloadStatus>(sqlite3_column_int(stmt, 4));
+        item.size = sqlite3_column_int64(stmt, 5);
+        item.downloadedSize = sqlite3_column_int64(stmt, 6);
+        
+        const char* dateAdded = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
+        if (dateAdded) {
+            item.dateAdded = wxString::FromUTF8(dateAdded);
+        }
+        
+        item.isYouTube = sqlite3_column_int(stmt, 8) != 0;
+        
+        const char* youtubeFormat = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 9));
+        if (youtubeFormat) {
+            item.youtubeFormat = wxString::FromUTF8(youtubeFormat);
+        }
+        
+        downloads.push_back(item);
+    }
+    
+    sqlite3_finalize(stmt);
+    
+    wxLogMessage("Retrieved %zu downloads from database", downloads.size());
+    return downloads;
+}
+
+DownloadItem DatabaseManager::GetDownloadById(int id) {
+    DownloadItem item;
+    
+    // إعداد الاستعلام
+    const char* sql = "SELECT id, name, url, save_path, status, size, downloaded, date_added, is_youtube, youtube_format FROM downloads WHERE id = ?;";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        wxLogError("Failed to prepare statement: %s", sqlite3_errmsg(m_db));
+        return item;
+    }
+    
+    // ربط القيم
+    sqlite3_bind_int(stmt, 1, id);
+    
+    // تنفيذ الاستعلام وقراءة النتائج
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        item.id = sqlite3_column_int(stmt, 0);
+        
+        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        if (name) {
+            item.name = wxString::FromUTF8(name);
+        }
+        
+        const char* url = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        if (url) {
+            item.url = wxString::FromUTF8(url);
+        }
+        
+        const char* savePath = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+        if (savePath) {
+            item.savePath = wxString::FromUTF8(savePath);
+        }
+        
+        item.status = static_cast<DownloadStatus>(sqlite3_column_int(stmt, 4));
+        item.size = sqlite3_column_int64(stmt, 5);
+        item.downloadedSize = sqlite3_column_int64(stmt, 6);
+        
+        const char* dateAdded = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
+        if (dateAdded) {
+            item.dateAdded = wxString::FromUTF8(dateAdded);
+        }
+        
+        item.isYouTube = sqlite3_column_int(stmt, 8) != 0;
+        
+        const char* youtubeFormat = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 9));
+        if (youtubeFormat) {
+            item.youtubeFormat = wxString::FromUTF8(youtubeFormat);
+        }
+    }
+    
+    sqlite3_finalize(stmt);
+    
+    wxLogMessage("Retrieved download from database, id: %d", id);
+    return item;
+}
