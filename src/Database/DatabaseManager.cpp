@@ -76,3 +76,41 @@ bool DatabaseManager::CreateTables() {
     return true;
 }
 
+
+bool DatabaseManager::AddDownload(const DownloadItem& item) {
+    // إعداد الاستعلام
+    const char* sql = "INSERT INTO downloads (name, url, save_path, status, size, downloaded, date_added, is_youtube, youtube_format) "
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        wxLogError("Failed to prepare statement: %s", sqlite3_errmsg(m_db));
+        return false;
+    }
+    
+    // ربط القيم
+    sqlite3_bind_text(stmt, 1, item.name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, item.url.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, item.savePath.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 4, static_cast<int>(item.status));
+    sqlite3_bind_int64(stmt, 5, static_cast<sqlite3_int64>(item.size));
+    sqlite3_bind_int64(stmt, 6, static_cast<sqlite3_int64>(item.downloadedSize));
+    sqlite3_bind_text(stmt, 7, item.dateAdded.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 8, item.isYouTube ? 1 : 0);
+    sqlite3_bind_text(stmt, 9, item.youtubeFormat.c_str(), -1, SQLITE_STATIC);
+    
+    // تنفيذ الاستعلام
+    result = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    if (result != SQLITE_DONE) {
+        wxLogError("Failed to add download: %s", sqlite3_errmsg(m_db));
+        return false;
+    }
+    
+    wxLogMessage("Download added to database, id: %lld", sqlite3_last_insert_rowid(m_db));
+    return true;
+}
+
+
