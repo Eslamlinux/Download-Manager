@@ -114,3 +114,40 @@ bool DatabaseManager::AddDownload(const DownloadItem& item) {
 }
 
 
+
+bool DatabaseManager::UpdateDownload(const DownloadItem& item) {
+    // إعداد الاستعلام
+    const char* sql = "UPDATE downloads SET name = ?, url = ?, save_path = ?, status = ?, size = ?, downloaded = ?, is_youtube = ?, youtube_format = ? "
+                      "WHERE id = ?;";
+    
+    sqlite3_stmt* stmt = nullptr;
+    int result = sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        wxLogError("Failed to prepare statement: %s", sqlite3_errmsg(m_db));
+        return false;
+    }
+    
+    // ربط القيم
+    sqlite3_bind_text(stmt, 1, item.name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, item.url.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, item.savePath.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 4, static_cast<int>(item.status));
+    sqlite3_bind_int64(stmt, 5, static_cast<sqlite3_int64>(item.size));
+    sqlite3_bind_int64(stmt, 6, static_cast<sqlite3_int64>(item.downloadedSize));
+    sqlite3_bind_int(stmt, 7, item.isYouTube ? 1 : 0);
+    sqlite3_bind_text(stmt, 8, item.youtubeFormat.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 9, item.id);
+    
+    // تنفيذ الاستعلام
+    result = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    if (result != SQLITE_DONE) {
+        wxLogError("Failed to update download: %s", sqlite3_errmsg(m_db));
+        return false;
+    }
+    
+    wxLogMessage("Download updated in database, id: %d", item.id);
+    return true;
+}
+
