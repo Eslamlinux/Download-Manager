@@ -28,3 +28,24 @@ DatabaseManager::~DatabaseManager() {
     
     wxLogMessage("Database closed");
 }
+
+bool DatabaseManager::OpenDatabase() {
+    // التأكد من وجود المجلد
+    wxFileName dbFile(m_dbPath);
+    if (!dbFile.DirExists()) {
+        if (!wxFileName::Mkdir(dbFile.GetPath(), wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
+            wxLogError("Failed to create directory: %s", dbFile.GetPath());
+            return false;
+        }
+    }
+    
+    // فتح قاعدة البيانات
+    int result = sqlite3_open(m_dbPath.c_str(), &m_db);
+    if (result != SQLITE_OK) {
+        wxLogError("Failed to open database: %s", sqlite3_errmsg(m_db));
+        return false;
+    }
+    
+    return true;
+}
+
