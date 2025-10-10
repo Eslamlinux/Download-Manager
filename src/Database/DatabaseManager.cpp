@@ -49,3 +49,30 @@ bool DatabaseManager::OpenDatabase() {
     return true;
 }
 
+
+bool DatabaseManager::CreateTables() {
+    // إنشاء جدول التنزيلات
+    const char* sql = "CREATE TABLE IF NOT EXISTS downloads ("
+                      "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                      "name TEXT NOT NULL,"
+                      "url TEXT NOT NULL,"
+                      "save_path TEXT NOT NULL,"
+                      "status INTEGER NOT NULL,"
+                      "size INTEGER NOT NULL,"
+                      "downloaded INTEGER NOT NULL,"
+                      "date_added TEXT NOT NULL,"
+                      "is_youtube INTEGER NOT NULL,"
+                      "youtube_format TEXT"
+                      ");";
+    
+    char* errMsg = nullptr;
+    int result = sqlite3_exec(m_db, sql, nullptr, nullptr, &errMsg);
+    if (result != SQLITE_OK) {
+        wxLogError("Failed to create tables: %s", errMsg);
+        sqlite3_free(errMsg);
+        return false;
+    }
+    
+    return true;
+}
+
