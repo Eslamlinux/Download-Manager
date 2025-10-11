@@ -174,3 +174,30 @@ int DownloadManager::AddYouTubeDownload(const wxString& url, const wxString& sav
         cleanTitle.Replace("|", "_");
     }
 
+ 
+    // Store format in the name if needed
+    if (!format.IsEmpty()) {
+        item.name = cleanTitle + " [" + format + "].mp4";
+    } else {
+        item.name = cleanTitle + ".mp4";
+    }
+    
+    // Add to list
+    m_downloads.push_back(item);
+    
+    // Save to database
+    m_databaseManager->AddDownload(item);
+    
+    wxLogMessage("YouTube download added, id: %d, url: %s", item.id, item.url);
+    
+    // Update UI
+    if (m_mainFrame) {
+        wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, ID_UpdateUI);
+        wxPostEvent(m_mainFrame, event);
+    }
+    
+    return item.id;
+}
+
+// Start download
+
