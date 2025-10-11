@@ -41,4 +41,51 @@ YouTubeDownloader::YouTubeDownloader(MainFrame* mainFrame, const AppSettings& se
     wxLogMessage("YouTubeDownloader initialized, executable: %s", m_executablePath);
 }
 
+YouTubeDownloader::~YouTubeDownloader()
+{
+    wxLogMessage("YouTubeDownloader destroyed");
+}
 
+void YouTubeDownloader::GetVideoInfo(const wxString& url, std::function<void(const wxString&)> callback) {
+    // Execute youtube-dl to get video info
+    wxString command = wxString::Format("%s --dump-json \"%s\"", m_executablePath, url);
+    
+    wxLogMessage("Executing command: %s", command);
+    
+    wxArrayString output;
+    wxExecute(command, output, wxEXEC_SYNC);
+    
+    wxString json;
+    for (const auto& line : output) {
+        json += line;
+    }
+    
+    callback(json);
+}
+
+// Implement the synchronous version that returns a YouTubeVideoInfo
+YouTubeVideoInfo YouTubeDownloader::GetVideoInfo(const wxString& url) {
+    YouTubeVideoInfo info;
+    
+    // Execute youtube-dl to get video info
+    wxString command = wxString::Format("%s --dump-json \"%s\"", m_executablePath, url);
+    
+    wxLogMessage("Executing command: %s", command);
+    
+    wxArrayString output;
+    wxExecute(command, output, wxEXEC_SYNC);
+    
+    wxString json;
+    for (const auto& line : output) {
+        json += line;
+    }
+    
+    // Parse JSON and fill info (simplified for now)
+    if (!json.IsEmpty()) {
+        // Just set a dummy title for now
+        info.title = "YouTube Video";
+        info.formats.Add("best");
+    }
+    
+    return info;
+}
