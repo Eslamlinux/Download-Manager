@@ -572,3 +572,46 @@ void MainFrame::OnAbout(wxCommandEvent& event)
     wxAboutBox(info);
 }
 
+
+void MainFrame::OnUpdateUI(wxCommandEvent& event)
+{
+    UpdateUI();
+}
+
+void MainFrame::OnTimer(wxTimerEvent& event)
+{
+    static int updateCounter = 0;
+    
+    // Only update UI every 2 seconds instead of every 1 second
+    // This reduces the frequency of selection resets
+    if (++updateCounter >= 2) {
+        UpdateUI();
+        updateCounter = 0;
+    }
+}
+
+void MainFrame::OnClose(wxCloseEvent& event)
+{
+    // Check if there are active downloads
+    const std::vector<DownloadItem>& downloads = m_downloadManager->GetDownloads();
+    bool hasActiveDownloads = false;
+    
+    for (const auto& item : downloads) {
+        if (item.status == DownloadStatus::DOWNLOADING) {
+            hasActiveDownloads = true;
+            break;
+        }
+    }
+    
+    if (hasActiveDownloads) {
+        // Ask for confirmation
+        wxMessageDialog dialog(this, "There are active downloads. Are you sure you want to exit?", "Confirm Exit", wxYES_NO | wxICON_QUESTION);
+        if (dialog.ShowModal() != wxID_YES) {
+            event.Veto();
+            return;
+        }
+    }
+    
+    // Destroy the frame
+    Destroy();
+}
