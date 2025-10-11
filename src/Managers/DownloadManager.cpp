@@ -454,3 +454,70 @@ long DownloadManager::GetSpeedLimit() const
 
 // Start download thread
 
+void DownloadManager::Start()
+{
+    if (m_isRunning) {
+        wxLogMessage("Download thread is already running");
+        return;
+    }
+    
+    wxLogMessage("Starting download thread");
+    m_isRunning = true;
+    
+    // Start thread
+    std::thread([this]() {
+        wxLogMessage("Download thread started");
+        
+        while (m_isRunning) {
+            // Check for downloads to process
+            bool hasActiveDownloads = false;
+            
+            {
+                std::lock_guard<std::mutex> lock(g_downloadMutex);
+                
+                for (auto& item : m_downloads) {
+                    if (item.status == DownloadStatus::DOWNLOADING) {
+                        hasActiveDownloads = true;
+                        
+                        wxLogMessage("Processing download ID: %d, URL: %s", item.id, item.url);
+                        
+                        // Process download outside the lock
+                        std::thread downloadThread([this, &item]() {
+                            ProcessDownload(&item);
+                            
+                            // Update database and UI after download completes
+                            std::lock_guard<std::mutex> updateLock(g_downloadMutex);
+                            m_databaseManager->UpdateDownload(item);
+                            
+                            if (m_mainFrame) {
+                                wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, ID_UpdateUI);
+                                wxPostEvent(m_mainFrame, event);
+                            }
+                        });
+                        
+                        // Detach the thread to let it run independently
+                        downloadThread.detach();
+                        
+                        // Only process one download at a time
+                        break;
+                    }
+                }
+            }
+            
+            // If no active downloads, sleep for a while
+            if (!hasActiveDownloads) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            } else {
+                // If we started a download, wait a bit before checking again
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+        }
+        
+        wxLogMessage("Download thread stopped");
+    }).detach();
+    
+    wxLogMessage("Download thread detached");
+}
+
+// Stop download thread
+
