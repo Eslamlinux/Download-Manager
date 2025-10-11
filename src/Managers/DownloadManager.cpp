@@ -414,3 +414,43 @@ void DownloadManager::DeleteDownload(int id)
 }
 
 // Delete multiple downloads
+void DownloadManager::DeleteDownloads(const std::vector<int>& ids)
+{
+    for (int id : ids) {
+        DeleteDownload(id);
+    }
+}
+
+// Get download by ID
+DownloadItem* DownloadManager::GetDownloadById(int id)
+{
+    for (auto& item : m_downloads) {
+        if (item.id == id) {
+            return &item;
+        }
+    }
+    
+    return nullptr;
+}
+
+// Get downloads
+const std::vector<DownloadItem>& DownloadManager::GetDownloads() const
+{
+    return m_downloads;
+}
+
+// Set speed limit
+void DownloadManager::SetSpeedLimit(long limit)
+{
+    m_speedLimit = limit;
+    wxLogMessage("Speed limit set to %ld KB/s", limit);
+}
+
+// Get speed limit
+long DownloadManager::GetSpeedLimit() const
+{
+    return m_speedLimit;
+}
+
+// Start download thread
+
