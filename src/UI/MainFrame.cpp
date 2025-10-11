@@ -524,3 +524,51 @@ void MainFrame::OnCopyURL(wxCommandEvent& event)
     }
 }
 
+
+void MainFrame::OnSettings(wxCommandEvent& event)
+{
+    // Show settings dialog
+    SettingsDialog dialog(this, m_settings);
+    if (dialog.ShowModal() == wxID_OK) {
+        // Save settings
+        m_settings = dialog.GetSettings();
+        m_downloadManager->SaveSettings(m_settings);
+        
+        // Update UI
+        UpdateUI();
+    }
+}
+
+void MainFrame::OnSpeedLimit(wxCommandEvent& event)
+{
+    // Show speed limit dialog
+    SpeedLimitDialog dialog(this, m_downloadManager->GetSpeedLimit());
+    if (dialog.ShowModal() == wxID_OK) {
+        // Set speed limit
+        m_downloadManager->SetSpeedLimit(dialog.GetSpeedLimit());
+        
+        // Update UI
+        UpdateUI();
+    }
+}
+
+void MainFrame::OnExit(wxCommandEvent& event)
+{
+    Close();
+}
+
+void MainFrame::OnAbout(wxCommandEvent& event)
+{
+    // Show about dialog
+    wxAboutDialogInfo info;
+    info.SetName("Advanced Download Manager");
+    info.SetVersion("1.0");
+    info.SetDescription("A download manager application built with wxWidgets and libcurl.");
+    info.SetCopyright("(C) 2023");
+    info.AddDeveloper("Developer");
+    info.SetWebSite("https://example.com");
+    info.SetLicense("This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.");
+    
+    wxAboutBox(info);
+}
+
