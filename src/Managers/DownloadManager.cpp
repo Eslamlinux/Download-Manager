@@ -35,3 +35,50 @@ DownloadManager::DownloadManager()
     wxLogMessage("DownloadManager initialized");
 }
 
+
+// Constructor with main frame
+DownloadManager::DownloadManager(MainFrame* mainFrame, const AppSettings& settings)
+    : m_mainFrame(mainFrame), m_settings(settings), m_nextId(1), m_isRunning(false), m_speedLimit(0)
+{
+    // Initialize curl
+    curl_global_init(CURL_GLOBAL_ALL);
+    
+    // Initialize database manager
+    m_databaseManager = new DatabaseManager("downloads.db");
+    
+    // Load downloads from database
+    LoadDownloads();
+    
+    // Connect event handler for download operations
+    if (m_mainFrame) {
+        m_mainFrame->Connect(wxEVT_DOWNLOAD_OPERATION, wxCommandEventHandler(MainFrame::OnDownloadOperation));
+    }
+    
+    wxLogMessage("DownloadManager initialized with main frame");
+}
+
+// Destructor
+DownloadManager::~DownloadManager()
+{
+    // Stop download thread
+    Stop();
+    
+    // Disconnect event handler
+    if (m_mainFrame) {
+        m_mainFrame->Disconnect(wxEVT_DOWNLOAD_OPERATION, wxCommandEventHandler(MainFrame::OnDownloadOperation));
+    }
+    
+    // Cleanup curl
+    curl_global_cleanup();
+    
+    // Delete database manager
+    if (m_databaseManager) {
+        delete m_databaseManager;
+        m_databaseManager = nullptr;
+    }
+    
+    wxLogMessage("DownloadManager destroyed");
+}
+
+// Add download
+
