@@ -432,3 +432,39 @@ void MainFrame::OnDeleteDownload(wxCommandEvent& event)
 }
 
 
+
+void MainFrame::OnOpenFile(wxCommandEvent& event)
+{
+    // Get selected item
+    long selectedIndex = m_downloadList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    if (selectedIndex == -1) {
+        wxMessageBox("No download selected.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Get download ID
+    int id = wxAtoi(m_downloadList->GetItemText(selectedIndex));
+    
+    // Get download
+    DownloadItem* item = m_downloadManager->GetDownloadById(id);
+    if (!item) {
+        wxMessageBox("Download not found.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Check if completed
+    if (item->status != DownloadStatus::COMPLETED) {
+        wxMessageBox("Download is not completed.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Open file
+    wxString filePath = item->savePath + wxFileName::GetPathSeparator() + item->name;
+    if (!wxFileExists(filePath)) {
+        wxMessageBox("File not found: " + filePath, "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    wxLaunchDefaultApplication(filePath);
+}
+
