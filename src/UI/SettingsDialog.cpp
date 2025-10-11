@@ -26,7 +26,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const AppSettings& settings)
   CenterOnParent();
 }
 
-
 // Create UI
 void SettingsDialog::CreateUI()
 {
@@ -70,8 +69,7 @@ void SettingsDialog::CreateUI()
   m_minimizeToTrayCheck = new wxCheckBox(generalPanel, wxID_ANY, "Minimize to Tray");
   m_minimizeToTrayCheck->SetValue(m_settings.minimizeToTray);
   generalSizer->Add(m_minimizeToTrayCheck, 0, wxEXPAND | wxALL, 10);
-
-
+  
   // Set sizer
   generalPanel->SetSizer(generalSizer);
   
@@ -127,3 +125,48 @@ void SettingsDialog::CreateUI()
   Bind(wxEVT_BUTTON, &SettingsDialog::OnOK, this, wxID_OK);
 }
 
+// Event handlers
+void SettingsDialog::OnBrowseSavePath(wxCommandEvent& event)
+{
+  // Show directory dialog
+  wxDirDialog dialog(this, "Select Default Save Path", m_savePathCtrl->GetValue());
+  if (dialog.ShowModal() == wxID_OK) {
+      m_savePathCtrl->SetValue(dialog.GetPath());
+  }
+}
+
+void SettingsDialog::OnBrowseYoutubeDlPath(wxCommandEvent& event)
+{
+  // Show file dialog
+  wxFileDialog dialog(this, "Select YouTube-DL Executable", wxEmptyString, wxEmptyString, "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+  if (dialog.ShowModal() == wxID_OK) {
+      m_youtubeDlPathCtrl->SetValue(dialog.GetPath());
+  }
+}
+
+void SettingsDialog::OnOK(wxCommandEvent& event)
+{
+  // Validate settings
+  if (m_savePathCtrl->GetValue().IsEmpty()) {
+      wxMessageBox("Default save path cannot be empty.", "Error", wxOK | wxICON_ERROR);
+      return;
+  }
+  
+  // Update settings
+  m_settings.defaultSavePath = m_savePathCtrl->GetValue();
+  m_settings.maxSimultaneousDownloads = m_maxDownloadsCtrl->GetValue();
+  m_settings.showNotifications = m_showNotificationsCheck->GetValue();
+  m_settings.startWithWindows = m_startWithWindowsCheck->GetValue();
+  m_settings.minimizeToTray = m_minimizeToTrayCheck->GetValue();
+  m_settings.youtubeExecutablePath = m_youtubeDlPathCtrl->GetValue();
+  m_settings.youtubeDefaultFormat = m_youtubeFormatCtrl->GetStringSelection();
+  
+  // Close dialog
+  EndModal(wxID_OK);
+}
+
+// Get settings
+const AppSettings& SettingsDialog::GetSettings() const
+{
+  return m_settings;
+}
