@@ -286,3 +286,68 @@ void MainFrame::UpdateUI()
         }
     }
 
+   
+    // Update status bar
+    int totalDownloads = downloads.size();
+    int activeDownloads = 0;
+    int completedDownloads = 0;
+    
+    for (const auto& item : downloads) {
+        if (item.status == DownloadStatus::DOWNLOADING) {
+            activeDownloads++;
+        } else if (item.status == DownloadStatus::COMPLETED) {
+            completedDownloads++;
+        }
+    }
+    
+    SetStatusText(wxString::Format("Total: %d | Active: %d | Completed: %d", totalDownloads, activeDownloads, completedDownloads), 0);
+    
+    // Update speed limit status
+    long speedLimit = m_downloadManager->GetSpeedLimit();
+    if (speedLimit > 0) {
+        SetStatusText(wxString::Format("Speed Limit: %ld KB/s", speedLimit), 1);
+    } else {
+        SetStatusText("Speed Limit: Unlimited", 1);
+    }
+}
+
+// Event handlers
+void MainFrame::OnAddDownload(wxCommandEvent& event)
+{
+    // Show download dialog
+    DownloadDialog dialog(this);
+    if (dialog.ShowModal() == wxID_OK) {
+        // Add download
+        wxString url = dialog.GetURL();
+        wxString savePath = dialog.GetSavePath();
+        
+        if (!url.IsEmpty() && !savePath.IsEmpty()) {
+            m_downloadManager->AddDownload(url, savePath);
+            UpdateUI();
+        }
+    }
+}
+
+void MainFrame::OnAddYouTubeDownload(wxCommandEvent& event)
+{
+    // Check if youtube-dl path is set
+    if (m_settings.youtubeExecutablePath.IsEmpty()) {
+        wxMessageBox("YouTube-DL path is not set. Please set it in the settings.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Show YouTube dialog
+    YouTubeDialog dialog(this);
+    if (dialog.ShowModal() == wxID_OK) {
+        // Add YouTube download
+        wxString url = dialog.GetURL();
+        wxString savePath = dialog.GetSavePath();
+        wxString title = dialog.GetTitle();
+        wxString format = dialog.GetFormat();
+        
+        if (!url.IsEmpty() && !savePath.IsEmpty()) {
+            m_downloadManager->AddYouTubeDownload(url, savePath, title, format);
+            UpdateUI();
+        }
+    }
+}
