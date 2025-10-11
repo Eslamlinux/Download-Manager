@@ -77,3 +77,37 @@ void YouTubeDownloadDialog::CreateUI() {
         }
     });
 }
+
+void YouTubeDownloadDialog::OnBrowse(wxCommandEvent& event) {
+    wxDirDialog dlg(this, "اختر مجلد الحفظ", m_savePathCtrl->GetValue());
+    if (dlg.ShowModal() == wxID_OK) {
+        m_savePathCtrl->SetValue(dlg.GetPath());
+    }
+}
+
+void YouTubeDownloadDialog::OnOK(wxCommandEvent& event) {
+    wxUnusedVar(event);
+    
+    // الحصول على المسار المحدد
+    wxString savePath = m_savePathCtrl->GetValue();
+    
+    // التحقق من صحة المسار
+    if (!wxDirExists(savePath)) {
+        wxMessageBox("مسار الحفظ غير موجود!", "خطأ", wxOK | wxICON_ERROR, this);
+        return;
+    }
+    
+    // الحصول على التنسيق المحدد
+    wxString format;
+    if (m_formatChoice->GetSelection() == 0) {
+        format = "bestvideo+bestaudio/best";  // أفضل جودة
+    } else if (m_formatChoice->GetSelection() == 1) {
+        format = "18";  // MP4 360p
+    } else if (m_formatChoice->GetSelection() == 2) {
+        format = "22";  // MP4 720p
+    } else if (m_formatChoice->GetSelection() == 3) {
+        format = "140";  // M4A (صوت فقط)
+    } else {
+        format = "17";  // 3GP 144p
+    }
+    
