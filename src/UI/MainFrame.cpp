@@ -180,3 +180,109 @@ void MainFrame::CreateUI()
     UpdateUI();
 }
  
+
+// Update UI
+void MainFrame::UpdateUI()
+{
+    std::lock_guard<std::mutex> lock(g_uiMutex);
+    
+    // Save selected items before clearing the list
+    std::vector<int> selectedIds = GetSelectedDownloadIds();
+    
+    // Remember the focused item if any
+    long focusedItem = m_downloadList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_FOCUSED);
+    int focusedId = -1;
+    if (focusedItem != -1) {
+        focusedId = wxAtoi(m_downloadList->GetItemText(focusedItem));
+    }
+    
+    // Clear download list
+    m_downloadList->DeleteAllItems();
+    
+    // Get downloads
+    const std::vector<DownloadItem>& downloads = m_downloadManager->GetDownloads();
+    
+    // Add downloads to list
+    for (size_t i = 0; i < downloads.size(); i++) {
+        const DownloadItem& item = downloads[i];
+        
+        // Add item
+        long index = m_downloadList->InsertItem(i, wxString::Format("%d", item.id));
+        m_downloadList->SetItem(index, 1, item.name);
+        
+        // Set status
+        wxString status;
+        switch (item.status) {
+            case DownloadStatus::PENDING:
+                status = "Pending";
+                break;
+            case DownloadStatus::DOWNLOADING:
+                status = "Downloading";
+                break;
+            case DownloadStatus::PAUSED:
+                status = "Paused";
+                break;
+            case DownloadStatus::COMPLETED:
+                status = "Completed";
+                break;
+            case DownloadStatus::ERROR:
+                status = "Error";
+                break;
+            default:
+                status = "Unknown";
+                break;
+        }
+        m_downloadList->SetItem(index, 2, status);
+        
+        // Set progress
+        m_downloadList->SetItem(index, 3, wxString::Format("%d%%", item.progress));
+        
+        // Set size
+        wxString size;
+        if (item.size > 0) {
+            if (item.size < 1024) {
+                size = wxString::Format("%lld B", item.size);
+            } else if (item.size < 1024 * 1024) {
+                size = wxString::Format("%.2f KB", item.size / 1024.0);
+            } else if (item.size < 1024 * 1024 * 1024) {
+                size = wxString::Format("%.2f MB", item.size / (1024.0 * 1024.0));
+            } else {
+                size = wxString::Format("%.2f GB", item.size / (1024.0 * 1024.0 * 1024.0));
+            }
+        } else {
+            size = "Unknown";
+        }
+        m_downloadList->SetItem(index, 4, size);
+        
+        // Set speed
+        wxString speed;
+        if (item.status == DownloadStatus::DOWNLOADING && item.speed > 0) {
+            if (item.speed < 1024) {
+                speed = wxString::Format("%lld B/s", item.speed);
+            } else if (item.speed < 1024 * 1024) {
+                speed = wxString::Format("%.2f KB/s", item.speed / 1024.0);
+            } else {
+                speed = wxString::Format("%.2f MB/s", item.speed / (1024.0 * 1024.0));
+            }
+        } else {
+            speed = "-";
+        }
+        m_downloadList->SetItem(index, 5, speed);
+        
+        // Set URL
+        m_downloadList->SetItem(index, 6, item.url);
+        
+        // Set date added
+        m_downloadList->SetItem(index, 7, item.dateAdded);
+        
+        // Restore selection if this item was previously selected
+        if (std::find(selectedIds.begin(), selectedIds.end(), item.id) != selectedIds.end()) {
+            m_downloadList->SetItemState(index, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+        }
+        
+        // Restore focus if this was the focused item
+        if (item.id == focusedId) {
+            m_downloadList->SetItemState(index, wxLIST_STATE_FOCUSED, wxLIST_STATE_FOCUSED);
+        }
+    }
+
