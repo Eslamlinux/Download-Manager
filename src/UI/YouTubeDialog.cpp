@@ -30,8 +30,7 @@ void YouTubeDialog::CreateUI()
   m_urlCtrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
   urlSizer->Add(m_urlCtrl, 1, wxALIGN_CENTER_VERTICAL);
   mainSizer->Add(urlSizer, 0, wxEXPAND | wxALL, 10);
-
-
+  
   // Save path
   wxBoxSizer* savePathSizer = new wxBoxSizer(wxHORIZONTAL);
   savePathSizer->Add(new wxStaticText(this, wxID_ANY, "Save Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
@@ -61,8 +60,7 @@ void YouTubeDialog::CreateUI()
   m_formatCtrl->SetSelection(0);
   formatSizer->Add(m_formatCtrl, 0, wxALIGN_CENTER_VERTICAL);
   mainSizer->Add(formatSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
-
-
+  
   // Add buttons
   wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
   buttonSizer->Add(new wxButton(this, wxID_OK, "OK"), 0, wxRIGHT, 5);
@@ -91,3 +89,46 @@ void YouTubeDialog::OnBrowse(wxCommandEvent& event)
   }
 }
 
+void YouTubeDialog::OnOK(wxCommandEvent& event)
+{
+  // Validate URL
+  if (m_urlCtrl->GetValue().IsEmpty()) {
+      wxMessageBox("URL cannot be empty.", "Error", wxOK | wxICON_ERROR);
+      m_urlCtrl->SetFocus();
+      return;
+  }
+  
+  // Validate save path
+  if (m_savePathCtrl->GetValue().IsEmpty()) {
+      wxMessageBox("Save path cannot be empty.", "Error", wxOK | wxICON_ERROR);
+      m_savePathCtrl->SetFocus();
+      return;
+  }
+  
+  // Close dialog
+  EndModal(wxID_OK);
+}
+
+// Get URL
+wxString YouTubeDialog::GetURL() const
+{
+  return m_urlCtrl->GetValue();
+}
+
+// Get save path
+wxString YouTubeDialog::GetSavePath() const
+{
+  return m_savePathCtrl->GetValue();
+}
+
+// Get title
+wxString YouTubeDialog::GetTitle() const
+{
+  return m_titleCtrl->GetValue();
+}
+
+// Get format
+wxString YouTubeDialog::GetFormat() const
+{
+  return m_formatCtrl->GetStringSelection();
+}
