@@ -201,3 +201,42 @@ int DownloadManager::AddYouTubeDownload(const wxString& url, const wxString& sav
 
 // Start download
 
+void DownloadManager::StartDownload(int id)
+{
+    std::lock_guard<std::mutex> lock(g_downloadMutex);
+    
+    // Find download
+    DownloadItem* item = GetDownloadById(id);
+    if (!item) {
+        wxLogError("Download not found, id: %d", id);
+        return;
+    }
+    
+    // Check if already downloading
+    if (item->status == DownloadStatus::DOWNLOADING) {
+        wxLogMessage("Download already in progress, id: %d", id);
+        return;
+    }
+    
+    // Set status
+    item->status = DownloadStatus::DOWNLOADING;
+    
+    // Update database
+    m_databaseManager->UpdateDownload(*item);
+    
+    // Update UI
+    if (m_mainFrame) {
+        wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, ID_UpdateUI);
+        wxPostEvent(m_mainFrame, event);
+    }
+    
+    // Start download thread if not running
+    if (!m_isRunning) {
+        Start();
+    }
+    
+    wxLogMessage("Download started, id: %d", id);
+}
+
+// Start multiple downloads
+
