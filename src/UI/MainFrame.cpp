@@ -468,3 +468,59 @@ void MainFrame::OnOpenFile(wxCommandEvent& event)
     wxLaunchDefaultApplication(filePath);
 }
 
+
+void MainFrame::OnOpenFolder(wxCommandEvent& event)
+{
+    // Get selected item
+    long selectedIndex = m_downloadList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    if (selectedIndex == -1) {
+        wxMessageBox("No download selected.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Get download ID
+    int id = wxAtoi(m_downloadList->GetItemText(selectedIndex));
+    
+    // Get download
+    DownloadItem* item = m_downloadManager->GetDownloadById(id);
+    if (!item) {
+        wxMessageBox("Download not found.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Open folder
+    if (!wxDirExists(item->savePath)) {
+        wxMessageBox("Folder not found: " + item->savePath, "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    wxLaunchDefaultApplication(item->savePath);
+}
+
+void MainFrame::OnCopyURL(wxCommandEvent& event)
+{
+    // Get selected item
+    long selectedIndex = m_downloadList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    if (selectedIndex == -1) {
+        wxMessageBox("No download selected.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Get download ID
+    int id = wxAtoi(m_downloadList->GetItemText(selectedIndex));
+    
+    // Get download
+    DownloadItem* item = m_downloadManager->GetDownloadById(id);
+    if (!item) {
+        wxMessageBox("Download not found.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Copy URL to clipboard
+    if (wxTheClipboard->Open()) {
+        wxTheClipboard->SetData(new wxTextDataObject(item->url));
+        wxTheClipboard->Close();
+        SetStatusText("URL copied to clipboard", 0);
+    }
+}
+
