@@ -35,7 +35,6 @@ DownloadManager::DownloadManager()
     wxLogMessage("DownloadManager initialized");
 }
 
-
 // Constructor with main frame
 DownloadManager::DownloadManager(MainFrame* mainFrame, const AppSettings& settings)
     : m_mainFrame(mainFrame), m_settings(settings), m_nextId(1), m_isRunning(false), m_speedLimit(0)
@@ -81,7 +80,6 @@ DownloadManager::~DownloadManager()
 }
 
 // Add download
-
 int DownloadManager::AddDownload(const wxString& url, const wxString& savePath)
 {
     std::lock_guard<std::mutex> lock(g_downloadMutex);
@@ -121,8 +119,7 @@ int DownloadManager::AddDownload(const wxString& url, const wxString& savePath)
     filename.Replace("|", "_");
     
     item.name = filename;
-
-  
+    
     // Add to list
     m_downloads.push_back(item);
     
@@ -173,8 +170,7 @@ int DownloadManager::AddYouTubeDownload(const wxString& url, const wxString& sav
         cleanTitle.Replace(">", "_");
         cleanTitle.Replace("|", "_");
     }
-
- 
+    
     // Store format in the name if needed
     if (!format.IsEmpty()) {
         item.name = cleanTitle + " [" + format + "].mp4";
@@ -200,7 +196,6 @@ int DownloadManager::AddYouTubeDownload(const wxString& url, const wxString& sav
 }
 
 // Start download
-
 void DownloadManager::StartDownload(int id)
 {
     std::lock_guard<std::mutex> lock(g_downloadMutex);
@@ -239,7 +234,6 @@ void DownloadManager::StartDownload(int id)
 }
 
 // Start multiple downloads
-
 void DownloadManager::StartDownloads(const std::vector<int>& ids)
 {
     for (int id : ids) {
@@ -281,7 +275,6 @@ void DownloadManager::PauseDownload(int id)
 }
 
 // Pause multiple downloads
-
 void DownloadManager::PauseDownloads(const std::vector<int>& ids)
 {
     for (int id : ids) {
@@ -328,7 +321,6 @@ void DownloadManager::ResumeDownload(int id)
 }
 
 // Resume multiple downloads
-
 void DownloadManager::ResumeDownloads(const std::vector<int>& ids)
 {
     for (int id : ids) {
@@ -373,7 +365,6 @@ void DownloadManager::CancelDownload(int id)
 }
 
 // Cancel multiple downloads
-
 void DownloadManager::CancelDownloads(const std::vector<int>& ids)
 {
     for (int id : ids) {
@@ -453,7 +444,6 @@ long DownloadManager::GetSpeedLimit() const
 }
 
 // Start download thread
-
 void DownloadManager::Start()
 {
     if (m_isRunning) {
@@ -520,7 +510,6 @@ void DownloadManager::Start()
 }
 
 // Stop download thread
-
 void DownloadManager::Stop()
 {
     m_isRunning = false;
@@ -583,3 +572,332 @@ static int CustomProgressCallback(void* clientp, curl_off_t dltotal, curl_off_t 
 }
 
 // Process download
+void DownloadManager::ProcessDownload(DownloadItem* item)
+{
+    // Check if the item is valid
+    if (!item) {
+        wxLogError("Invalid download item");
+        return;
+    }
+
+    wxLogMessage("Processing download: %s", item->url);
+    
+    // Create save directory if it doesn't exist
+    if (!wxDirExists(item->savePath)) {
+        wxLogMessage("Creating directory: %s", item->savePath);
+        if (!wxFileName::Mkdir(item->savePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
+            wxLogError("Failed to create directory: %s", item->savePath);
+            item->status = DownloadStatus::ERROR;
+            return;
+        }
+    }
+
+    // Create full file path
+    wxString filePath = item->savePath + wxFileName::GetPathSeparator() + item->name;
+    wxLogMessage("File path: %s", filePath);
+    
+    // Check if this is a YouTube URL
+    if (item->url.Contains("youtube.com") || item->url.Contains("youtu.be")) {
+        wxLogMessage("Detected YouTube URL");
+        if (!m_settings.youtubeExecutablePath.IsEmpty()) {
+            wxLogMessage("Using YouTube-DL: %s", m_settings.youtubeExecutablePath);
+            
+            // Create a temporary file to store the output
+            wxString tempFile = wxFileName::CreateTempFileName("yt_dl_output");
+            
+            // Build the command
+            wxString command = wxString::Format("\"%s\" -o \"%s\" -f \"%s\" \"%s\" > \"%s\" 2>&1", 
+                                              m_settings.youtubeExecutablePath,
+                                              filePath,
+                                              m_settings.youtubeDefaultFormat,
+                                              item->url,
+                                              tempFile);
+            
+            wxLogMessage("Executing command: %s", command);
+            
+            // Execute the command
+            long exitCode = wxExecute(command, wxEXEC_SYNC);
+            
+            // Read the output
+            wxTextFile outputFile;
+            if (outputFile.Open(tempFile)) {
+                for (wxString line = outputFile.GetFirstLine(); !outputFile.Eof(); line = outputFile.GetNextLine()) {
+                    wxLogMessage("youtube-dl: %s", line);
+                }
+                outputFile.Close();
+            }
+            
+            // Delete the temporary file
+            wxRemoveFile(tempFile);
+            
+            if (exitCode == 0) {
+                wxLogMessage("YouTube download completed successfully");
+                item->status = DownloadStatus::COMPLETED;
+                item->progress = 100;
+                
+                // Get file size
+                wxFileName fn(filePath);
+                if (fn.FileExists()) {
+                    item->size = fn.GetSize().ToULong();
+                    item->downloadedSize = item->size;
+                }
+                
+                return;
+            } else {
+                wxLogError("YouTube download failed with exit code: %ld", exitCode);
+                item->status = DownloadStatus::ERROR;
+                return;
+            }
+        } else {
+            wxLogError("YouTube-DL path not set in settings");
+            item->status = DownloadStatus::ERROR;
+            return;
+        }
+    }
+    
+    // Regular download process using libcurl
+    wxLogMessage("Using libcurl for download: %s", item->url);
+    
+    // Initialize error buffer
+    char errorBuffer[CURL_ERROR_SIZE];
+    memset(errorBuffer, 0, CURL_ERROR_SIZE);
+    
+    // Maximum number of retries
+    const int MAX_RETRIES = 3;
+    bool downloadSuccess = false;
+    
+    for (int retryCount = 0; retryCount < MAX_RETRIES && !downloadSuccess; retryCount++) {
+        if (retryCount > 0) {
+            wxLogMessage("Retry attempt %d of %d for URL: %s", retryCount + 1, MAX_RETRIES, item->url);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+        
+        CURL* curl = curl_easy_init();
+        if (!curl) {
+            wxLogError("Failed to initialize curl");
+            continue;
+        }
+        
+        // Open file for writing
+        FILE* fp = fopen(filePath.c_str(), "wb");
+        if (!fp) {
+            wxLogError("Failed to open file for writing: %s", filePath);
+            curl_easy_cleanup(curl);
+            continue;
+        }
+        
+        // Process URL - encode spaces and special characters
+        wxString processedUrl = item->url;
+        
+        // Check for spaces or special characters and encode them properly
+        if (processedUrl.Contains(" ") || processedUrl.Contains("\"") || processedUrl.Contains("'") || 
+            processedUrl.Contains("<") || processedUrl.Contains(">") || processedUrl.Contains("[") || 
+            processedUrl.Contains("]")) {
+            wxLogMessage("URL contains spaces or special characters, encoding it");
+            
+            // Use curl's URL encoding function
+            char* output = curl_easy_escape(curl, processedUrl.c_str(), processedUrl.length());
+            if (output) {
+                // We need to preserve the http:// or https:// part
+                wxString protocol;
+                if (processedUrl.StartsWith("http://")) {
+                    protocol = "http://";
+                } else if (processedUrl.StartsWith("https://")) {
+                    protocol = "https://";
+                }
+                
+                // Combine protocol with encoded URL, but be careful not to double-encode
+                if (!protocol.IsEmpty()) {
+                    wxString encodedPart = wxString(output);
+                    // Remove the protocol part from the encoded string if it's there
+                    if (encodedPart.StartsWith("http%3A%2F%2F")) {
+                        encodedPart = encodedPart.Mid(13);
+                        processedUrl = protocol + encodedPart;
+                    } else if (encodedPart.StartsWith("https%3A%2F%2F")) {
+                        encodedPart = encodedPart.Mid(14);
+                        processedUrl = protocol + encodedPart;
+                    } else {
+                        // If the protocol wasn't encoded, just use the encoded string
+                        processedUrl = encodedPart;
+                    }
+                } else {
+                    processedUrl = wxString(output);
+                }
+                
+                curl_free(output);
+            } else {
+                // Manual encoding for basic cases
+                processedUrl.Replace(" ", "%20");
+                processedUrl.Replace("\"", "%22");
+                processedUrl.Replace("'", "%27");
+                processedUrl.Replace("<", "%3C");
+                processedUrl.Replace(">", "%3E");
+                processedUrl.Replace("[", "%5B");
+                processedUrl.Replace("]", "%5D");
+            }
+            
+            wxLogMessage("Encoded URL: %s", processedUrl);
+        }
+        
+        // Set up headers to mimic a browser
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        headers = curl_slist_append(headers, "Accept: */*");
+        headers = curl_slist_append(headers, "Accept-Language: en-US,en;q=0.9,ar;q=0.8");
+        headers = curl_slist_append(headers, "Connection: keep-alive");
+        
+        // Extract the domain from the URL to use as the Referer
+        wxString domain;
+        if (processedUrl.StartsWith("http://")) {
+            domain = processedUrl.Mid(7).BeforeFirst('/');
+        } else if (processedUrl.StartsWith("https://")) {
+            domain = processedUrl.Mid(8).BeforeFirst('/');
+        }
+        
+        if (!domain.IsEmpty()) {
+            wxString referer = "Referer: http://" + domain + "/";
+            headers = curl_slist_append(headers, referer.c_str());
+            
+            wxString origin = "Origin: http://" + domain;
+            headers = curl_slist_append(headers, origin.c_str());
+        }
+        
+        // Special handling for mp3quran.net
+        if (item->url.Contains("mp3quran.net")) {
+            wxLogMessage("Adding special headers for mp3quran.net");
+            headers = curl_slist_append(headers, "Referer: https://mp3quran.net/");
+            headers = curl_slist_append(headers, "Origin: https://mp3quran.net");
+            headers = curl_slist_append(headers, "Accept: audio/webm,audio/ogg,audio/mp3,audio/*;q=0.9");
+        }
+        
+        // Set up libcurl options
+        curl_easy_setopt(curl, CURLOPT_URL, processedUrl.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CustomWriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, CustomProgressCallback);
+        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, item);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ""); // Enable cookies
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); // Enable verbose output for debugging
+        curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer); // Set error buffer
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 300L); // 5 minute timeout
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L); // 30 second connect timeout
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // Don't verify SSL certificates
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // Don't verify host
+        
+        // Apply speed limit if set
+        if (m_speedLimit > 0) {
+            curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE, (curl_off_t)m_speedLimit * 1024);
+        }
+        
+        // Execute the request
+        wxLogMessage("Executing curl request");
+        CURLcode res = curl_easy_perform(curl);
+        
+        // Close the file
+        fclose(fp);
+        
+        // Free the headers
+        curl_slist_free_all(headers);
+        
+        // Check the result
+        if (res != CURLE_OK) {
+            wxLogError("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+            
+            // Get more detailed error information
+            long response_code = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+            
+            if (response_code > 0) {
+                wxLogError("HTTP response code: %ld", response_code);
+            }
+            
+            // Log the error buffer content
+            wxLogError("Error details: %s", errorBuffer);
+            
+            // Clean up libcurl
+            curl_easy_cleanup(curl);
+            
+            // Continue to next retry
+            continue;
+        } else {
+            // Get download information
+            curl_off_t downloadedSize;
+            curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD_T, &downloadedSize);
+            item->downloadedSize = static_cast<long long>(downloadedSize);
+            item->size = item->downloadedSize;
+            item->status = DownloadStatus::COMPLETED;
+            item->progress = 100;
+            
+            wxLogMessage("Download completed: %s", item->name);
+            downloadSuccess = true;
+            
+            // Clean up libcurl
+            curl_easy_cleanup(curl);
+            
+            // Break out of retry loop
+            break;
+        }
+    }
+    
+    // If all retries failed, set status to ERROR
+    if (!downloadSuccess) {
+        item->status = DownloadStatus::ERROR;
+        wxLogError("All download attempts failed for URL: %s", item->url);
+    }
+}
+
+// Transform tvquran.com URL to a more direct format
+wxString DownloadManager::TransformTvQuranUrl(const wxString& originalUrl) {
+    // Example: https://download.tvquran.com/download/recitations/83/229/001.mp3
+    // Try to transform to a more direct URL format
+    
+    wxRegEx reRecitation("https?://download\\.tvquran\\.com/download/recitations/(\\d+)/(\\d+)/(\\d+)\\.mp3");
+    
+    if (reRecitation.Matches(originalUrl)) {
+        wxString reciterId = reRecitation.GetMatch(originalUrl, 1);
+        wxString surahId = reRecitation.GetMatch(originalUrl, 2);
+        wxString fileId = reRecitation.GetMatch(originalUrl, 3);
+        
+        // Try alternative URL formats
+        // Format 1: Direct CDN
+        return wxString::Format("https://cdn.tvquran.com/recitations/%s/%s/%s.mp3", 
+                               reciterId, surahId, fileId);
+    }
+    
+    return originalUrl; // Return original if no transformation is possible
+}
+
+// Properly encode a URL
+wxString DownloadManager::EncodeURL(const wxString& url) {
+    CURL* curl = curl_easy_init();
+    wxString encodedUrl = url;
+    
+    if (curl) {
+        // Use curl's URL encoding function
+        char* output = curl_easy_escape(curl, url.c_str(), url.length());
+        if (output) {
+            encodedUrl = wxString(output);
+            curl_free(output);
+        }
+        curl_easy_cleanup(curl);
+    }
+    
+    return encodedUrl;
+}
+
+// Save settings
+void DownloadManager::SaveSettings(const AppSettings& settings)
+{
+    m_settings = settings;
+    m_settings.Save();
+    wxLogMessage("Settings saved");
+}
+
+// Get settings
+const AppSettings& DownloadManager::GetSettings() const
+{
+    return m_settings;
+}
