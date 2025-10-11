@@ -82,3 +82,43 @@ DownloadManager::~DownloadManager()
 
 // Add download
 
+int DownloadManager::AddDownload(const wxString& url, const wxString& savePath)
+{
+    std::lock_guard<std::mutex> lock(g_downloadMutex);
+    
+    // Create download item
+    DownloadItem item;
+    item.id = m_nextId++;
+    item.url = url;
+    item.savePath = savePath;
+    item.status = DownloadStatus::PENDING;
+    item.progress = 0;
+    item.size = 0;
+    item.downloadedSize = 0;
+    item.speed = 0;
+    item.dateAdded = wxDateTime::Now().Format("%Y-%m-%d %H:%M:%S");
+    
+    // Extract filename from URL
+    wxString filename = url.AfterLast('/');
+    if (filename.IsEmpty()) {
+        filename = wxString::Format("download_%d", item.id);
+    }
+    
+    // Clean up filename - remove query parameters
+    if (filename.Contains("?")) {
+        filename = filename.BeforeFirst('?');
+    }
+    
+    // Ensure filename is valid
+    filename.Replace(":", "_");
+    filename.Replace("/", "_");
+    filename.Replace("\\", "_");
+    filename.Replace("*", "_");
+    filename.Replace("?", "_");
+    filename.Replace("\"", "_");
+    filename.Replace("<", "_");
+    filename.Replace(">", "_");
+    filename.Replace("|", "_");
+    
+    item.name = filename;
+
