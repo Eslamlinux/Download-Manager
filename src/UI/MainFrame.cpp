@@ -615,3 +615,45 @@ void MainFrame::OnClose(wxCloseEvent& event)
     // Destroy the frame
     Destroy();
 }
+
+void MainFrame::OnDownloadListItemActivated(wxListEvent& event)
+{
+    // Get download ID
+    int id = wxAtoi(m_downloadList->GetItemText(event.GetIndex()));
+    
+    // Get download
+    DownloadItem* item = m_downloadManager->GetDownloadById(id);
+    if (!item) {
+        return;
+    }
+    
+    // Handle based on status
+    switch (item->status) {
+        case DownloadStatus::PENDING:
+            m_downloadManager->StartDownload(id);
+            break;
+        case DownloadStatus::DOWNLOADING:
+            m_downloadManager->PauseDownload(id);
+            break;
+        case DownloadStatus::PAUSED:
+            m_downloadManager->ResumeDownload(id);
+            break;
+        case DownloadStatus::COMPLETED:
+            // Open file
+            {
+                wxString filePath = item->savePath + wxFileName::GetPathSeparator() + item->name;
+                if (wxFileExists(filePath)) {
+                    wxLaunchDefaultApplication(filePath);
+                }
+            }
+            break;
+        case DownloadStatus::ERROR:
+            // Retry
+            m_downloadManager->StartDownload(id);
+            break;
+    }
+    
+    // Update UI
+    UpdateUI();
+}
+
