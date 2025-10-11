@@ -351,3 +351,48 @@ void MainFrame::OnAddYouTubeDownload(wxCommandEvent& event)
         }
     }
 }
+
+void MainFrame::OnStartDownload(wxCommandEvent& event)
+{
+    // Get selected items
+    std::vector<int> selectedIds = GetSelectedDownloadIds();
+    
+    if (selectedIds.empty()) {
+        wxMessageBox("No downloads selected.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Start downloads
+    m_downloadManager->StartDownloads(selectedIds);
+    UpdateUI();
+}
+
+void MainFrame::OnPauseDownload(wxCommandEvent& event)
+{
+    // Get selected items
+    std::vector<int> selectedIds = GetSelectedDownloadIds();
+    
+    if (selectedIds.empty()) {
+        wxMessageBox("No downloads selected.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Pause downloads
+    m_downloadManager->PauseDownloads(selectedIds);
+    UpdateUI();
+}
+
+void MainFrame::OnResumeDownload(wxCommandEvent& event)
+{
+    // Get selected items
+    std::vector<int> selectedIds = GetSelectedDownloadIds();
+    
+    if (selectedIds.empty()) {
+        wxMessageBox("No downloads selected.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Resume downloads
+    m_downloadManager->ResumeDownloads(selectedIds);
+    UpdateUI();
+}
