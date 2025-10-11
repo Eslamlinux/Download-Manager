@@ -73,7 +73,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxLogMessage("MainFrame created");
 }
 
-
 // Destructor
 MainFrame::~MainFrame()
 {
@@ -126,9 +125,7 @@ void MainFrame::CreateUI()
     downloadMenu->Append(ID_OpenFolder, "Open F&older\tCtrl+F", "Open containing folder");
     downloadMenu->Append(ID_CopyURL, "&Copy URL\tCtrl+C", "Copy download URL to clipboard");
     menuBar->Append(downloadMenu, "&Download");
-
-
-
+    
     // Help menu
     wxMenu* helpMenu = new wxMenu();
     helpMenu->Append(wxID_ABOUT, "&About...", "Show about dialog");
@@ -179,7 +176,6 @@ void MainFrame::CreateUI()
     // Update UI
     UpdateUI();
 }
- 
 
 // Update UI
 void MainFrame::UpdateUI()
@@ -285,8 +281,7 @@ void MainFrame::UpdateUI()
             m_downloadList->SetItemState(index, wxLIST_STATE_FOCUSED, wxLIST_STATE_FOCUSED);
         }
     }
-
-   
+    
     // Update status bar
     int totalDownloads = downloads.size();
     int activeDownloads = 0;
@@ -431,8 +426,6 @@ void MainFrame::OnDeleteDownload(wxCommandEvent& event)
     }
 }
 
-
-
 void MainFrame::OnOpenFile(wxCommandEvent& event)
 {
     // Get selected item
@@ -467,7 +460,6 @@ void MainFrame::OnOpenFile(wxCommandEvent& event)
     
     wxLaunchDefaultApplication(filePath);
 }
-
 
 void MainFrame::OnOpenFolder(wxCommandEvent& event)
 {
@@ -524,7 +516,6 @@ void MainFrame::OnCopyURL(wxCommandEvent& event)
     }
 }
 
-
 void MainFrame::OnSettings(wxCommandEvent& event)
 {
     // Show settings dialog
@@ -571,7 +562,6 @@ void MainFrame::OnAbout(wxCommandEvent& event)
     
     wxAboutBox(info);
 }
-
 
 void MainFrame::OnUpdateUI(wxCommandEvent& event)
 {
@@ -657,3 +647,52 @@ void MainFrame::OnDownloadListItemActivated(wxListEvent& event)
     UpdateUI();
 }
 
+void MainFrame::OnDownloadListItemRightClick(wxListEvent& event)
+{
+    // Create context menu
+    wxMenu menu;
+    menu.Append(ID_StartDownload, "&Start");
+    menu.Append(ID_PauseDownload, "&Pause");
+    menu.Append(ID_ResumeDownload, "&Resume");
+    menu.Append(ID_CancelDownload, "&Cancel");
+    menu.AppendSeparator();
+    menu.Append(ID_DeleteDownload, "&Delete");
+    menu.AppendSeparator();
+    menu.Append(ID_OpenFile, "Open &File");
+    menu.Append(ID_OpenFolder, "Open F&older");
+    menu.Append(ID_CopyURL, "&Copy URL");
+    
+    // Show context menu
+    PopupMenu(&menu);
+}
+
+// Event handler for download operations
+void MainFrame::OnDownloadOperation(wxCommandEvent& event)
+{
+    // This function is kept for compatibility but is no longer needed
+    // in our new implementation as we handle downloads directly in the
+    // DownloadManager class
+    wxLogMessage("Download operation event received, but not used in the new implementation");
+}
+
+// Get selected download IDs
+std::vector<int> MainFrame::GetSelectedDownloadIds()
+{
+    std::vector<int> ids;
+    
+    // Get selected items
+    long item = -1;
+    for (;;) {
+        item = m_downloadList->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+        if (item == -1)
+            break;
+            
+        // Get download ID
+        int id = wxAtoi(m_downloadList->GetItemText(item));
+        ids.push_back(id);
+        
+        wxLogMessage("Selected download ID: %d", id);
+    }
+    
+    return ids;
+}
