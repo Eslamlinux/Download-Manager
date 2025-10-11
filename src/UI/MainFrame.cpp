@@ -396,3 +396,39 @@ void MainFrame::OnResumeDownload(wxCommandEvent& event)
     m_downloadManager->ResumeDownloads(selectedIds);
     UpdateUI();
 }
+
+void MainFrame::OnCancelDownload(wxCommandEvent& event)
+{
+    // Get selected items
+    std::vector<int> selectedIds = GetSelectedDownloadIds();
+    
+    if (selectedIds.empty()) {
+        wxMessageBox("No downloads selected.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Cancel downloads
+    m_downloadManager->CancelDownloads(selectedIds);
+    UpdateUI();
+}
+
+void MainFrame::OnDeleteDownload(wxCommandEvent& event)
+{
+    // Get selected items
+    std::vector<int> selectedIds = GetSelectedDownloadIds();
+    
+    if (selectedIds.empty()) {
+        wxMessageBox("No downloads selected.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+    
+    // Confirm deletion
+    wxMessageDialog dialog(this, wxString::Format("Are you sure you want to delete %zu selected download(s)?", selectedIds.size()), "Confirm Deletion", wxYES_NO | wxICON_QUESTION);
+    if (dialog.ShowModal() == wxID_YES) {
+        // Delete downloads
+        m_downloadManager->DeleteDownloads(selectedIds);
+        UpdateUI();
+    }
+}
+
+
