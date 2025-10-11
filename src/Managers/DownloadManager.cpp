@@ -329,3 +329,48 @@ void DownloadManager::ResumeDownload(int id)
 
 // Resume multiple downloads
 
+void DownloadManager::ResumeDownloads(const std::vector<int>& ids)
+{
+    for (int id : ids) {
+        ResumeDownload(id);
+    }
+}
+
+// Cancel download
+void DownloadManager::CancelDownload(int id)
+{
+    std::lock_guard<std::mutex> lock(g_downloadMutex);
+    
+    // Find download
+    DownloadItem* item = GetDownloadById(id);
+    if (!item) {
+        wxLogError("Download not found, id: %d", id);
+        return;
+    }
+    
+    // Check if downloading or paused
+    if (item->status != DownloadStatus::DOWNLOADING && item->status != DownloadStatus::PAUSED) {
+        wxLogMessage("Download not in progress or paused, id: %d", id);
+        return;
+    }
+    
+    // Set status
+    item->status = DownloadStatus::PENDING;
+    item->progress = 0;
+    item->downloadedSize = 0;
+    item->speed = 0;
+    
+    // Update database
+    m_databaseManager->UpdateDownload(*item);
+    
+    // Update UI
+    if (m_mainFrame) {
+        wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, ID_UpdateUI);
+        wxPostEvent(m_mainFrame, event);
+    }
+    
+    wxLogMessage("Download canceled, id: %d", id);
+}
+
+// Cancel multiple downloads
+
