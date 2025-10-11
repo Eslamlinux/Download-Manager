@@ -521,3 +521,65 @@ void DownloadManager::Start()
 
 // Stop download thread
 
+void DownloadManager::Stop()
+{
+    m_isRunning = false;
+}
+
+// Load downloads from database
+void DownloadManager::LoadDownloads()
+{
+    // Get downloads from database
+    m_downloads = m_databaseManager->GetAllDownloads();
+    
+    // Find next ID
+    m_nextId = 1;
+    for (const auto& item : m_downloads) {
+        if (item.id >= m_nextId) {
+            m_nextId = item.id + 1;
+        }
+    }
+    
+    wxLogMessage("Loaded %zu downloads from database", m_downloads.size());
+}
+
+// Custom write callback for libcurl
+static size_t CustomWriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
+{
+    FILE* fp = (FILE*)userp;
+    size_t written = fwrite(contents, size, nmemb, fp);
+    return written;
+}
+
+// Custom progress callback for libcurl
+static int CustomProgressCallback(void* clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+{
+    DownloadItem* item = (DownloadItem*)clientp;
+    
+    // Update progress
+    if (dltotal > 0) {
+        item->progress = static_cast<int>((dlnow * 100) / dltotal);
+        item->size = dltotal;
+        item->downloadedSize = dlnow;
+    } else {
+        // If total size is unknown, just show downloaded size
+        item->downloadedSize = dlnow;
+    }
+    
+    // Calculate speed (bytes per second)
+    static auto lastTime = std::chrono::steady_clock::now();
+    static curl_off_t lastBytes = 0;
+    
+    auto now = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTime).count();
+    
+    if (duration > 1000) {  // Update speed every second
+        item->speed = static_cast<long long>((dlnow - lastBytes) * 1000 / duration);
+        lastTime = now;
+        lastBytes = dlnow;
+    }
+    
+    return 0;  // Return 0 to continue download
+}
+
+// Process download
