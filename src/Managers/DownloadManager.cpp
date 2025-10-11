@@ -374,3 +374,43 @@ void DownloadManager::CancelDownload(int id)
 
 // Cancel multiple downloads
 
+void DownloadManager::CancelDownloads(const std::vector<int>& ids)
+{
+    for (int id : ids) {
+        CancelDownload(id);
+    }
+}
+
+// Delete download
+void DownloadManager::DeleteDownload(int id)
+{
+    std::lock_guard<std::mutex> lock(g_downloadMutex);
+    
+    // Find download
+    DownloadItem* item = GetDownloadById(id);
+    if (!item) {
+        wxLogError("Download not found, id: %d", id);
+        return;
+    }
+    
+    // Delete from database
+    m_databaseManager->DeleteDownload(id);
+    
+    // Delete from list
+    for (auto it = m_downloads.begin(); it != m_downloads.end(); ++it) {
+        if (it->id == id) {
+            m_downloads.erase(it);
+            break;
+        }
+    }
+    
+    // Update UI
+    if (m_mainFrame) {
+        wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, ID_UpdateUI);
+        wxPostEvent(m_mainFrame, event);
+    }
+    
+    wxLogMessage("Download deleted, id: %d", id);
+}
+
+// Delete multiple downloads
