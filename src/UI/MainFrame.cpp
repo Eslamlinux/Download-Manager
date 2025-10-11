@@ -128,3 +128,55 @@ void MainFrame::CreateUI()
     menuBar->Append(downloadMenu, "&Download");
 
 
+
+    // Help menu
+    wxMenu* helpMenu = new wxMenu();
+    helpMenu->Append(wxID_ABOUT, "&About...", "Show about dialog");
+    menuBar->Append(helpMenu, "&Help");
+    
+    // Set menu bar
+    SetMenuBar(menuBar);
+    
+    // Create toolbar
+    wxToolBar* toolBar = CreateToolBar();
+    toolBar->AddTool(ID_AddDownload, "Add Download", wxArtProvider::GetBitmap(wxART_NEW), "Add a new download");
+    toolBar->AddTool(ID_AddYouTubeDownload, "Add YouTube Download", wxArtProvider::GetBitmap(wxART_NEW), "Add a new YouTube download");
+    toolBar->AddSeparator();
+    toolBar->AddTool(ID_StartDownload, "Start", wxArtProvider::GetBitmap(wxART_GO_FORWARD), "Start selected download(s)");
+    toolBar->AddTool(ID_PauseDownload, "Pause", wxArtProvider::GetBitmap(wxART_TICK_MARK), "Pause selected download(s)");
+    toolBar->AddTool(ID_ResumeDownload, "Resume", wxArtProvider::GetBitmap(wxART_GO_FORWARD), "Resume selected download(s)");
+    toolBar->AddTool(ID_CancelDownload, "Cancel", wxArtProvider::GetBitmap(wxART_CROSS_MARK), "Cancel selected download(s)");
+    toolBar->AddSeparator();
+    toolBar->AddTool(ID_DeleteDownload, "Delete", wxArtProvider::GetBitmap(wxART_DELETE), "Delete selected download(s)");
+    toolBar->AddSeparator();
+    toolBar->AddTool(ID_Settings, "Settings", wxArtProvider::GetBitmap(wxART_EXECUTABLE_FILE), "Configure settings");
+    toolBar->Realize();
+    
+    // Create download list
+    m_downloadList = new wxListCtrl(this, ID_DownloadList, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL);
+    
+    // Add columns
+    m_downloadList->InsertColumn(0, "ID", wxLIST_FORMAT_LEFT, 50);
+    m_downloadList->InsertColumn(1, "Name", wxLIST_FORMAT_LEFT, 200);
+    m_downloadList->InsertColumn(2, "Status", wxLIST_FORMAT_LEFT, 100);
+    m_downloadList->InsertColumn(3, "Progress", wxLIST_FORMAT_LEFT, 100);
+    m_downloadList->InsertColumn(4, "Size", wxLIST_FORMAT_LEFT, 100);
+    m_downloadList->InsertColumn(5, "Speed", wxLIST_FORMAT_LEFT, 100);
+    m_downloadList->InsertColumn(6, "URL", wxLIST_FORMAT_LEFT, 300);
+    m_downloadList->InsertColumn(7, "Date Added", wxLIST_FORMAT_LEFT, 150);
+    
+    // Create sizer
+    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->Add(m_downloadList, 1, wxEXPAND | wxALL, 5);
+    
+    // Set sizer
+    SetSizer(sizer);
+    
+    // Connect download list event handlers
+    m_downloadList->Bind(wxEVT_LIST_ITEM_ACTIVATED, &MainFrame::OnDownloadListItemActivated, this);
+    m_downloadList->Bind(wxEVT_LIST_ITEM_RIGHT_CLICK, &MainFrame::OnDownloadListItemRightClick, this);
+    
+    // Update UI
+    UpdateUI();
+}
+ 
