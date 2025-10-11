@@ -98,3 +98,4 @@ wxString DownloadDialog::GetSavePath() const
 {
   return m_savePathCtrl->GetValue();
 }
+
