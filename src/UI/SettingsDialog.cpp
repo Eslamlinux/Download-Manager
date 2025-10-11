@@ -71,3 +71,59 @@ void SettingsDialog::CreateUI()
   m_minimizeToTrayCheck->SetValue(m_settings.minimizeToTray);
   generalSizer->Add(m_minimizeToTrayCheck, 0, wxEXPAND | wxALL, 10);
 
+
+  // Set sizer
+  generalPanel->SetSizer(generalSizer);
+  
+  // Create YouTube panel
+  wxPanel* youtubePanel = new wxPanel(notebook);
+  wxBoxSizer* youtubeSizer = new wxBoxSizer(wxVERTICAL);
+  
+  // YouTube-DL path
+  wxBoxSizer* youtubeDlPathSizer = new wxBoxSizer(wxHORIZONTAL);
+  youtubeDlPathSizer->Add(new wxStaticText(youtubePanel, wxID_ANY, "YouTube-DL Path:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+  m_youtubeDlPathCtrl = new wxTextCtrl(youtubePanel, wxID_ANY, m_settings.youtubeExecutablePath);
+  youtubeDlPathSizer->Add(m_youtubeDlPathCtrl, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+  wxButton* browseYoutubeDlPathButton = new wxButton(youtubePanel, wxID_ANY, "Browse...");
+  youtubeDlPathSizer->Add(browseYoutubeDlPathButton, 0, wxALIGN_CENTER_VERTICAL);
+  youtubeSizer->Add(youtubeDlPathSizer, 0, wxEXPAND | wxALL, 10);
+  
+  // YouTube default format
+  wxBoxSizer* youtubeFormatSizer = new wxBoxSizer(wxHORIZONTAL);
+  youtubeFormatSizer->Add(new wxStaticText(youtubePanel, wxID_ANY, "Default Format:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+  wxArrayString formatChoices;
+  formatChoices.Add("best");
+  formatChoices.Add("bestvideo+bestaudio");
+  formatChoices.Add("mp4");
+  formatChoices.Add("webm");
+  formatChoices.Add("mp3");
+  m_youtubeFormatCtrl = new wxChoice(youtubePanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, formatChoices);
+  m_youtubeFormatCtrl->SetStringSelection(m_settings.youtubeDefaultFormat);
+  youtubeFormatSizer->Add(m_youtubeFormatCtrl, 0, wxALIGN_CENTER_VERTICAL);
+  youtubeSizer->Add(youtubeFormatSizer, 0, wxEXPAND | wxALL, 10);
+  
+  // Set sizer
+  youtubePanel->SetSizer(youtubeSizer);
+  
+  // Add panels to notebook
+  notebook->AddPage(generalPanel, "General");
+  notebook->AddPage(youtubePanel, "YouTube");
+  
+  // Add notebook to main sizer
+  mainSizer->Add(notebook, 1, wxEXPAND | wxALL, 10);
+  
+  // Add buttons
+  wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+  buttonSizer->Add(new wxButton(this, wxID_OK, "OK"), 0, wxRIGHT, 5);
+  buttonSizer->Add(new wxButton(this, wxID_CANCEL, "Cancel"), 0);
+  mainSizer->Add(buttonSizer, 0, wxALIGN_RIGHT | wxALL, 10);
+  
+  // Set sizer
+  SetSizer(mainSizer);
+  
+  // Connect events
+  browseSavePathButton->Bind(wxEVT_BUTTON, &SettingsDialog::OnBrowseSavePath, this);
+  browseYoutubeDlPathButton->Bind(wxEVT_BUTTON, &SettingsDialog::OnBrowseYoutubeDlPath, this);
+  Bind(wxEVT_BUTTON, &SettingsDialog::OnOK, this, wxID_OK);
+}
+
