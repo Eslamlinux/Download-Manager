@@ -62,3 +62,32 @@ void YouTubeDialog::CreateUI()
   formatSizer->Add(m_formatCtrl, 0, wxALIGN_CENTER_VERTICAL);
   mainSizer->Add(formatSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
 
+
+  // Add buttons
+  wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+  buttonSizer->Add(new wxButton(this, wxID_OK, "OK"), 0, wxRIGHT, 5);
+  buttonSizer->Add(new wxButton(this, wxID_CANCEL, "Cancel"), 0);
+  mainSizer->Add(buttonSizer, 0, wxALIGN_RIGHT | wxALL, 10);
+  
+  // Set sizer
+  SetSizer(mainSizer);
+  
+  // Connect events
+  browseButton->Bind(wxEVT_BUTTON, &YouTubeDialog::OnBrowse, this);
+  m_urlCtrl->Bind(wxEVT_TEXT_ENTER, &YouTubeDialog::OnOK, this);
+  Bind(wxEVT_BUTTON, &YouTubeDialog::OnOK, this, wxID_OK);
+  
+  // Set focus to URL control
+  m_urlCtrl->SetFocus();
+}
+
+// Event handlers
+void YouTubeDialog::OnBrowse(wxCommandEvent& event)
+{
+  // Show directory dialog
+  wxDirDialog dialog(this, "Select Save Path");
+  if (dialog.ShowModal() == wxID_OK) {
+      m_savePathCtrl->SetValue(dialog.GetPath());
+  }
+}
+
