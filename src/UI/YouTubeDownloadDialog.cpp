@@ -38,7 +38,7 @@ void YouTubeDownloadDialog::CreateUI() {
     m_savePathCtrl = new wxTextCtrl(this, wxID_ANY, wxGetHomeDir() + wxFileName::GetPathSeparator() + "Downloads");
     m_browseButton = new wxButton(this, wxID_ANY, "تصفح...");
     
-
+    // إنشاء أزرار الحوار
     wxStdDialogButtonSizer* buttonSizer = new wxStdDialogButtonSizer();
     wxButton* okButton = new wxButton(this, wxID_OK, "تنزيل");
     wxButton* cancelButton = new wxButton(this, wxID_CANCEL, "إلغاء");
@@ -111,3 +111,37 @@ void YouTubeDownloadDialog::OnOK(wxCommandEvent& event) {
         format = "17";  // 3GP 144p
     }
     
+    // إنشاء الأمر
+    wxString command = wxString::Format("%s -f %s -o \"%s/%%%(title)s.%%%(ext)s\" %s",
+                                       m_downloader->GetExecutablePath(),
+                                       format,
+                                       savePath,
+                                       m_url);
+    
+    // تسجيل الأمر
+    wxLogMessage("Executing command: %s", command);
+    
+    // تنفيذ الأمر
+    wxExecute(command, wxEXEC_ASYNC);
+    
+    // إضافة التنزيل إلى قائمة التنزيلات الرئيسية
+    MainFrame* mainFrame = dynamic_cast<MainFrame*>(GetParent());
+    if (mainFrame) {
+        DownloadManager* downloadManager = mainFrame->GetDownloadManager();
+        if (downloadManager) {
+            wxString title = m_titleCtrl->GetValue();
+            if (title.IsEmpty()) {
+                title = "YouTube Video";
+            }
+            
+            // إضافة إلى قائمة التنزيلات
+            downloadManager->AddYouTubeDownload(m_url, savePath, title, format);
+        }
+    }
+    
+    EndModal(wxID_OK);
+}
+
+void YouTubeDownloadDialog::OnCancel(wxCommandEvent& event) {
+    EndModal(wxID_CANCEL);
+}
