@@ -73,3 +73,58 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxLogMessage("MainFrame created");
 }
 
+
+// Destructor
+MainFrame::~MainFrame()
+{
+    // Stop timer
+    if (m_timer) {
+        m_timer->Stop();
+        delete m_timer;
+        m_timer = nullptr;
+    }
+    
+    // Delete download manager
+    if (m_downloadManager) {
+        delete m_downloadManager;
+        m_downloadManager = nullptr;
+    }
+    
+    // Save settings
+    m_settings.Save();
+    
+    wxLogMessage("MainFrame destroyed");
+}
+
+// Create UI
+void MainFrame::CreateUI()
+{
+    // Create menu bar
+    wxMenuBar* menuBar = new wxMenuBar();
+    
+    // File menu
+    wxMenu* fileMenu = new wxMenu();
+    fileMenu->Append(ID_AddDownload, "&Add Download...\tCtrl+N", "Add a new download");
+    fileMenu->Append(ID_AddYouTubeDownload, "Add &YouTube Download...\tCtrl+Y", "Add a new YouTube download");
+    fileMenu->AppendSeparator();
+    fileMenu->Append(ID_Settings, "&Settings...\tCtrl+S", "Configure settings");
+    fileMenu->Append(ID_SpeedLimit, "Speed &Limit...\tCtrl+L", "Set download speed limit");
+    fileMenu->AppendSeparator();
+    fileMenu->Append(wxID_EXIT, "E&xit\tAlt+F4", "Exit the application");
+    menuBar->Append(fileMenu, "&File");
+    
+    // Download menu
+    wxMenu* downloadMenu = new wxMenu();
+    downloadMenu->Append(ID_StartDownload, "&Start\tF9", "Start selected download(s)");
+    downloadMenu->Append(ID_PauseDownload, "&Pause\tF10", "Pause selected download(s)");
+    downloadMenu->Append(ID_ResumeDownload, "&Resume\tF11", "Resume selected download(s)");
+    downloadMenu->Append(ID_CancelDownload, "&Cancel\tF12", "Cancel selected download(s)");
+    downloadMenu->AppendSeparator();
+    downloadMenu->Append(ID_DeleteDownload, "&Delete\tDel", "Delete selected download(s)");
+    downloadMenu->AppendSeparator();
+    downloadMenu->Append(ID_OpenFile, "Open &File\tCtrl+O", "Open downloaded file");
+    downloadMenu->Append(ID_OpenFolder, "Open F&older\tCtrl+F", "Open containing folder");
+    downloadMenu->Append(ID_CopyURL, "&Copy URL\tCtrl+C", "Copy download URL to clipboard");
+    menuBar->Append(downloadMenu, "&Download");
+
+
