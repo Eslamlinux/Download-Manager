@@ -122,3 +122,55 @@ int DownloadManager::AddDownload(const wxString& url, const wxString& savePath)
     
     item.name = filename;
 
+  
+    // Add to list
+    m_downloads.push_back(item);
+    
+    // Save to database
+    m_databaseManager->AddDownload(item);
+    
+    wxLogMessage("Download added, id: %d, url: %s, filename: %s", item.id, item.url, item.name);
+    
+    // Update UI
+    if (m_mainFrame) {
+        wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, ID_UpdateUI);
+        wxPostEvent(m_mainFrame, event);
+    }
+    
+    return item.id;
+}
+
+// Add YouTube download
+int DownloadManager::AddYouTubeDownload(const wxString& url, const wxString& savePath, const wxString& title, const wxString& format)
+{
+    std::lock_guard<std::mutex> lock(g_downloadMutex);
+    
+    // Create download item
+    DownloadItem item;
+    item.id = m_nextId++;
+    item.url = url;
+    item.savePath = savePath;
+    item.status = DownloadStatus::PENDING;
+    item.progress = 0;
+    item.size = 0;
+    item.downloadedSize = 0;
+    item.speed = 0;
+    item.dateAdded = wxDateTime::Now().Format("%Y-%m-%d %H:%M:%S");
+    
+    // Set name
+    wxString cleanTitle = title;
+    if (cleanTitle.IsEmpty()) {
+        cleanTitle = wxString::Format("youtube_%d", item.id);
+    } else {
+        // Clean up title for filename
+        cleanTitle.Replace(":", "_");
+        cleanTitle.Replace("/", "_");
+        cleanTitle.Replace("\\", "_");
+        cleanTitle.Replace("*", "_");
+        cleanTitle.Replace("?", "_");
+        cleanTitle.Replace("\"", "_");
+        cleanTitle.Replace("<", "_");
+        cleanTitle.Replace(">", "_");
+        cleanTitle.Replace("|", "_");
+    }
+
