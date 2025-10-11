@@ -44,3 +44,35 @@ void DownloadDialog::CreateUI()
   buttonSizer->Add(new wxButton(this, wxID_OK, "OK"), 0, wxRIGHT, 5);
   buttonSizer->Add(new wxButton(this, wxID_CANCEL, "Cancel"), 0);
   mainSizer->Add(buttonSizer, 0, wxALIGN_RIGHT | wxALL, 10);
+
+  // Set sizer
+  SetSizer(mainSizer);
+  
+  // Connect events
+  browseButton->Bind(wxEVT_BUTTON, &DownloadDialog::OnBrowse, this);
+  m_urlCtrl->Bind(wxEVT_TEXT_ENTER, &DownloadDialog::OnOK, this);
+  Bind(wxEVT_BUTTON, &DownloadDialog::OnOK, this, wxID_OK);
+  
+  // Set focus to URL control
+  m_urlCtrl->SetFocus();
+}
+
+// Event handlers
+void DownloadDialog::OnBrowse(wxCommandEvent& event)
+{
+  // Show directory dialog
+  wxDirDialog dialog(this, "Select Save Path");
+  if (dialog.ShowModal() == wxID_OK) {
+      m_savePathCtrl->SetValue(dialog.GetPath());
+  }
+}
+
+void DownloadDialog::OnOK(wxCommandEvent& event)
+{
+  // Validate URL
+  if (m_urlCtrl->GetValue().IsEmpty()) {
+      wxMessageBox("URL cannot be empty.", "Error", wxOK | wxICON_ERROR);
+      m_urlCtrl->SetFocus();
+      return;
+  }
+  
