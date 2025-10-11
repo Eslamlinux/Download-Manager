@@ -44,7 +44,7 @@ void DownloadDialog::CreateUI()
   buttonSizer->Add(new wxButton(this, wxID_OK, "OK"), 0, wxRIGHT, 5);
   buttonSizer->Add(new wxButton(this, wxID_CANCEL, "Cancel"), 0);
   mainSizer->Add(buttonSizer, 0, wxALIGN_RIGHT | wxALL, 10);
-
+  
   // Set sizer
   SetSizer(mainSizer);
   
@@ -76,3 +76,25 @@ void DownloadDialog::OnOK(wxCommandEvent& event)
       return;
   }
   
+  // Validate save path
+  if (m_savePathCtrl->GetValue().IsEmpty()) {
+      wxMessageBox("Save path cannot be empty.", "Error", wxOK | wxICON_ERROR);
+      m_savePathCtrl->SetFocus();
+      return;
+  }
+  
+  // Close dialog
+  EndModal(wxID_OK);
+}
+
+// Get URL
+wxString DownloadDialog::GetURL() const
+{
+  return m_urlCtrl->GetValue();
+}
+
+// Get save path
+wxString DownloadDialog::GetSavePath() const
+{
+  return m_savePathCtrl->GetValue();
+}
