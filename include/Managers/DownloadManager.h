@@ -42,4 +42,32 @@ public:
     void DeleteDownloads(const std::vector<int>& ids);
     DownloadItem* GetDownloadById(int id);
     const std::vector<DownloadItem>& GetDownloads() const;
+    
+    // Speed limit methods
+    void SetSpeedLimit(long limit);
+    long GetSpeedLimit() const;
+    
+    // Settings methods
+    void SaveSettings(const AppSettings& settings);
+    const AppSettings& GetSettings() const;
+    
+private:
+    // Private methods
+    void Start();
+    void Stop();
+    void LoadDownloads();
+    void ProcessDownload(DownloadItem* item);
+    wxString TransformTvQuranUrl(const wxString& originalUrl);
+    wxString EncodeURL(const wxString& url);
+    
+    // Member variables
+    MainFrame* m_mainFrame;
+    AppSettings m_settings;
+    DatabaseManager* m_databaseManager;
+    std::vector<DownloadItem> m_downloads;
+    int m_nextId;
+    bool m_isRunning;
+    long m_speedLimit; // in KB/s
+};
 
+#endif // DOWNLOADMANAGER_H
