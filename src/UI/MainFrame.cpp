@@ -555,10 +555,10 @@ void MainFrame::OnAbout(wxCommandEvent& event)
     info.SetName("Advanced Download Manager");
     info.SetVersion("1.0");
     info.SetDescription("A download manager application built with wxWidgets and libcurl.");
-    info.SetCopyright("(C) 2023");
-    info.AddDeveloper("Developer");
-    info.SetWebSite("https://example.com");
-    info.SetLicense("This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.");
+    info.SetCopyright("(C) 2025");
+    info.AddDeveloper("Eslam Linux");
+    info.SetWebSite("https://github.com/Eslamlinux/Advanced-Download-Manager/");
+    info.SetLicense("This program is free software Made with Love by Eslam Linux; \nyou can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.");
     
     wxAboutBox(info);
 }
